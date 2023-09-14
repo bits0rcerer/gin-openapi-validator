@@ -3,6 +3,7 @@ package ginopenapivalidator
 import (
 	"bytes"
 	"net/http"
+	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -23,11 +24,12 @@ func (w responseBodyWriter) Write(b []byte) (int, error) {
 
 // ValidatorOptions currently not used but we may use it in the future to add options.
 type ValidatorOptions struct {
+	testT *testing.T
 }
 
 // Validator returns a OpenAPI Validator middleware. It takes as argument doc where
 // this is meant to be yaml byte array
-func Validator(doc []byte, _ ...ValidatorOptions) gin.HandlerFunc {
+func Validator(doc []byte, options ValidatorOptions) gin.HandlerFunc {
 	openapi3.DefineStringFormat("uuid", openapi3.FormatOfStringForUUIDOfRFC4122)
 
 	swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(doc)
@@ -60,6 +62,10 @@ func Validator(doc []byte, _ ...ValidatorOptions) gin.HandlerFunc {
 		w := &responseBodyWriter{body: &bytes.Buffer{}, ResponseWriter: c.Writer}
 		c.Writer = w
 		if err != nil {
+			if options.testT != nil {
+				options.testT.Fatalf("could not validate request: %v", err)
+			}
+
 			decodedValidationError, errDecode := Decode(err)
 			if errDecode != nil && decodedValidationError != nil && decodedValidationError.Status != 0 && decodedValidationError.Title != "" {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
@@ -83,6 +89,10 @@ func Validator(doc []byte, _ ...ValidatorOptions) gin.HandlerFunc {
 		}
 		// Validate response.
 		if err := openapi3filter.ValidateResponse(c.Request.Context(), responseValidationInput); err != nil {
+			if options.testT != nil {
+				options.testT.Fatalf("could not validate response: %v", err)
+			}
+
 			log.WithError(err).Error("could not validate response payload")
 		}
 	}
