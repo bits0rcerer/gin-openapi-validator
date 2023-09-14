@@ -24,15 +24,15 @@ func (w responseBodyWriter) Write(b []byte) (int, error) {
 
 // ValidatorOptions currently not used but we may use it in the future to add options.
 type ValidatorOptions struct {
-	testT *testing.T
+	TestT *testing.T
 }
 
 // Validator returns a OpenAPI Validator middleware. It takes as argument doc where
 // this is meant to be yaml byte array
-func Validator(doc []byte, options ValidatorOptions) gin.HandlerFunc {
+func Validator(doc []byte, options ...ValidatorOptions) gin.HandlerFunc {
 	openapi3.DefineStringFormat("uuid", openapi3.FormatOfStringForUUIDOfRFC4122)
 
-	swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(doc)
+	swagger, err := openapi3.NewLoader().LoadFromData(doc)
 	if err != nil {
 		panic("failed to setup swagger middleware")
 	}
@@ -62,8 +62,8 @@ func Validator(doc []byte, options ValidatorOptions) gin.HandlerFunc {
 		w := &responseBodyWriter{body: &bytes.Buffer{}, ResponseWriter: c.Writer}
 		c.Writer = w
 		if err != nil {
-			if options.testT != nil {
-				options.testT.Fatalf("could not validate request: %v", err)
+			if len(options) > 0 && options[0].TestT != nil {
+				options[0].TestT.Fatalf("could not validate request: %v", err)
 			}
 
 			decodedValidationError, errDecode := Decode(err)
@@ -89,8 +89,8 @@ func Validator(doc []byte, options ValidatorOptions) gin.HandlerFunc {
 		}
 		// Validate response.
 		if err := openapi3filter.ValidateResponse(c.Request.Context(), responseValidationInput); err != nil {
-			if options.testT != nil {
-				options.testT.Fatalf("could not validate response: %v", err)
+			if len(options) > 0 && options[0].TestT != nil {
+				options[0].TestT.Fatalf("could not validate response: %v", err)
 			}
 
 			log.WithError(err).Error("could not validate response payload")

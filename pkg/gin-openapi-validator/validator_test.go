@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	ginopenapivalidator "github.com/phumberdroz/gin-openapi-validator/pkg/gin-openapi-validator"
+	ginopenapivalidator "github.com/bits0rcerer/gin-openapi-validator/pkg/gin-openapi-validator"
 )
 
 var hook *test.Hook
